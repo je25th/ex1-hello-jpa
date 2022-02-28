@@ -19,9 +19,11 @@ public class JpaMain {
             //등록
 //            Member member = new Member();
 //            member.setId(2L);
-//            member.setName("helloB");
+//            member.setName("helloB");//여기까지는 비영속상태
 //
-//            em.persist(member);
+//            em.persist(member);//여기부터 영속상태, 이때 DB에 저장되는것은 아님(1차 캐시(한 트랜젝션기간동안만 유지)에 저장됨)
+//
+//            em.detach(member);//detach하면 준영속상태가 됨
 
             //삭제
 //            Member findMember = em.find(Member.class, 1L);
@@ -40,7 +42,24 @@ public class JpaMain {
                 System.out.println("member = " + member.getName());
             }
 
-            tx.commit();
+            //영속 엔티티의 동일성 보장(같은 트랜젝션 내일때!)
+            Member a = em.find(Member.class, 2L);
+            Member b = em.find(Member.class, 2L);
+            System.out.println("result = " +  (a == b));//true
+
+            //쓰기 지연
+            Member memberA = new Member(101L, "A");
+            Member memberB = new Member(102L, "B");
+            em.persist(memberA);//아직 쿼리 안나감, 쓰기 지연 SQL 저장소에 쿼리 등록해둠
+            em.persist(memberB);//아직 쿼리 안나감, 쓰기 지연 SQL 저장소에 쿼리 등록해둠
+
+            tx.commit();//플러시(flush) 발생! - 이때 한번에 쓰기 지연 SQL 저장소에 등록되어있는 쿼리가 나감!
+
+            //flush
+            Member member200 = new Member(200L, "200");
+            em.persist(member200);
+            em.flush();//쿼리 나감, 1차 캐시는 유지됨(영속성 컨텍스트를 비우지 않음)
+
         } catch (Exception e) {
             tx.rollback();
         } finally {
